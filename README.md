@@ -17,3 +17,5 @@ https://meet.google.com/wuv-njsa-ejb
 20240907-PM https://www.youtube.com/watch?v=veEM6Rtyla8
 
 20240914-AM https://www.youtube.com/watch?v=NjRrcno0hdA
+
+20240914-PM https://www.youtube.com/watch?v=yysw3ws9miw
