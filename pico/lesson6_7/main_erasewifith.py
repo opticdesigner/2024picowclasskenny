@@ -1,9 +1,11 @@
+import tools
 from machine import Timer,ADC,Pin,PWM,RTC
 
 adc = ADC(4)
 pwm = PWM(Pin(15),freq=50)
 conversion_factor = 3.3 / (65535)
 rtc = RTC()
+tools.connect() #connect wifi
 
 def do_thing(t):
     reading = adc.read_u16() * conversion_factor
@@ -19,6 +21,7 @@ def do_thing1(t):
     pwm.duty_u16(duty)
     
     print(f'可變電阻:{round(duty/65535*10)}')
+
 
 
 t1 = Timer(period=2000, mode=Timer.PERIODIC, callback=do_thing)
