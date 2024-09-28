@@ -9,6 +9,11 @@ https://meet.google.com/wuv-njsa-ejb
 ssid = 'A590301'
 password = 'A590301AA'
 
+MQTT
+IP:192.168.0.252
+username:pi
+pw:raspberry
+
 8/31
 
 20240831-AM https://www.youtube.com/watch?v=nyDlvRaT_Ns
