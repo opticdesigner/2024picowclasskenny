@@ -26,3 +26,4 @@ https://meet.google.com/wuv-njsa-ejb
 
 20240928-AM https://www.youtube.com/watch?v=-78MchFwNro
 
+https://www.youtube.com/watch?v=-vPnCMW5rl4
