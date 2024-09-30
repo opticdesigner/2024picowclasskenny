@@ -14,6 +14,10 @@ IP:192.168.0.252
 username:pi
 pw:raspberry
 
+https://github.com/roberthsu2003/pico_W
+https://github.com/roberthsu2003/python
+https://github.com/roberthsu2003/__2024_08_31_chihlee_pico__
+
 8/31
 
 20240831-AM https://www.youtube.com/watch?v=nyDlvRaT_Ns
@@ -34,4 +38,4 @@ pw:raspberry
 
 20240928-AM https://www.youtube.com/watch?v=-78MchFwNro
 
-https://www.youtube.com/watch?v=-vPnCMW5rl4
+20240928-PM https://www.youtube.com/watch?v=-vPnCMW5rl4
