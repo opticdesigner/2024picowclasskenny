@@ -43,3 +43,7 @@ https://github.com/roberthsu2003/__2024_08_31_chihlee_pico__
 20241005-AM https://www.youtube.com/watch?v=SxWh_Aeg0xQ
 
 20241005-PM https://www.youtube.com/watch?v=TkEv9BU4mVo
+
+20241012-AM https://www.youtube.com/watch?v=8ZLWbNhBLDk
+
+20241012-PM
