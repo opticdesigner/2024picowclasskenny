@@ -6,6 +6,9 @@
 
 https://meet.google.com/wuv-njsa-ejb
 
+## 上課應用程式:G:\Sharing\20240831-1031 picowpythonclass 內
+
+WIFI
 ssid = 'A590301'
 password = 'A590301AA'
 
@@ -17,6 +20,8 @@ pw:raspberry
 https://github.com/roberthsu2003/pico_W
 https://github.com/roberthsu2003/python
 https://github.com/roberthsu2003/__2024_08_31_chihlee_pico__
+
+## 上課應用程式:G:\Sharing\20240831-1031 picowpythonclass 內
 
 8/31
 
