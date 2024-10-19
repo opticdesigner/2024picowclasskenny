@@ -26,10 +26,7 @@ def do_thing(t):
     mqtt.publish('SA-20/TEMPERATURE', f'{temperature}')
     adc_value = adc_light.read_u16()
     print(f'光線:{adc_value}')
-    line_state = 0 if adc_value < 8500 else 1
-    print(f'光線:{line_state}')
-    #mqtt.publish('SA-20/LINE_LEVEL', f'{adc_value}')
-    mqtt.publish('SA-20/LINE_LEVEL', f'{line_state}')
+    mqtt.publish('SA-20/LIGHT_LEVEL', f'{adc_value}')
     
     
 def do_thing1(t):
@@ -43,7 +40,6 @@ def do_thing1(t):
     light_level = round(duty/65535*10)
     print(f'可變電阻:{light_level}')
     mqtt.publish('SA-20/LED_LEVEL', f'{light_level}')
-    
     
     
 
