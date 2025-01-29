@@ -4,7 +4,7 @@ import pandas as pd
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from matplotlib import rcParams
-
+#加入可以顯示中文繁體字型
 # 設定中文字型
 rcParams['font.sans-serif'] = ['Microsoft JhengHei']
 rcParams['axes.unicode_minus'] = False
