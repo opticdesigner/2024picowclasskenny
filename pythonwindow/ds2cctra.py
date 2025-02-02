@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 import datetime
@@ -15,6 +12,13 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
+
+# ========== 新增colour-science相關導入 ==========
+import colour
+from colour import SDS_ILLUMINANTS
+from colour.colorimetry import (MSDS_CMFS, SpectralDistribution, sd_to_XYZ, XYZ_to_xy)
+from colour.quality import color_rendering_index
+from colour.temperature import xy_to_CCT
 
 # =======================
 # 全域配置
@@ -163,28 +167,34 @@ class MainApp(tk.Tk):
         self.create_right_panel()  # 建立右側 Matplotlib 區域
         self.paned.add(self.right_frame, minsize=500)
 
-        # 底部：顯示積分計算結果，每項單獨一列
+        # 底部：顯示計算結果
         self.status_frame = tk.Frame(self, bg=BG_COLOR)
         self.status_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=5, pady=5)
 
+        # PPF相關變數
         self.ppf_total_var = tk.StringVar()
         self.ppf_blue_var  = tk.StringVar()
         self.ppf_green_var = tk.StringVar()
         self.ppf_red_var   = tk.StringVar()
+        
+        # CCT和Ra變數
+        self.cct_var = tk.StringVar()
+        self.ra_var = tk.StringVar()
 
-        lbl_total = tk.Label(self.status_frame, textvariable=self.ppf_total_var, font=(FONT_NAME, 12),
-                             bg=BG_COLOR, fg=FG_COLOR)
-        lbl_blue  = tk.Label(self.status_frame, textvariable=self.ppf_blue_var,  font=(FONT_NAME, 12),
-                             bg=BG_COLOR, fg=FG_COLOR)
-        lbl_green = tk.Label(self.status_frame, textvariable=self.ppf_green_var, font=(FONT_NAME, 12),
-                             bg=BG_COLOR, fg=FG_COLOR)
-        lbl_red   = tk.Label(self.status_frame, textvariable=self.ppf_red_var,   font=(FONT_NAME, 12),
-                             bg=BG_COLOR, fg=FG_COLOR)
-        # 每項單獨一列顯示
-        lbl_total.pack(anchor="w", padx=10)
-        lbl_blue.pack(anchor="w", padx=10)
-        lbl_green.pack(anchor="w", padx=10)
-        lbl_red.pack(anchor="w", padx=10)
+        # 結果顯示標籤
+        results = [
+            self.ppf_total_var,
+            self.ppf_blue_var,
+            self.ppf_green_var,
+            self.ppf_red_var,
+            self.cct_var,
+            self.ra_var
+        ]
+        
+        for var in results:
+            lbl = tk.Label(self.status_frame, textvariable=var, 
+                          font=(FONT_NAME, 12), bg=BG_COLOR, fg=FG_COLOR)
+            lbl.pack(anchor="w", padx=10)
 
         self.update_ppf_info()
 
@@ -255,17 +265,14 @@ class MainApp(tk.Tk):
         lbl_name = tk.Label(frame, text=spectrum.filename, font=(FONT_NAME, 10), bg=BG_COLOR, fg=FG_COLOR)
         lbl_name.pack(side=tk.TOP, anchor="w", padx=5, pady=2)
 
-        # 倍率手動輸入框，預設值為 1.0
+        # 倍率手動輸入框
         multiplier_var = tk.StringVar(value="1.0")
         entry_multiplier = tk.Entry(frame, textvariable=multiplier_var, font=(FONT_NAME, 9), width=10)
         entry_multiplier.pack(side=tk.TOP, padx=5, pady=2, anchor="w")
-        entry_multiplier.insert(0, "1.0")
-        # 綁定「Enter」鍵事件，當使用者輸入數字後按下 Enter 進行更新
         entry_multiplier.bind("<Return>", lambda event, sp=spectrum, var=multiplier_var: self.on_multiplier_change(sp, var))
-        # 將 multiplier_var 保存到 spectrum 物件中，方便日後參考
         spectrum.multiplier_var = multiplier_var
 
-        # 小型 Matplotlib 圖形顯示該光譜
+        # 小型預覽圖
         fig_small = Figure(figsize=(3, 1.5), dpi=80)
         ax_small = fig_small.add_subplot(111)
         ax_small.plot(spectrum.df['wavelength'], spectrum.get_scaled_intensity(), color=ACCENT_COLOR)
@@ -277,42 +284,34 @@ class MainApp(tk.Tk):
         canvas_small.draw()
         canvas_small.get_tk_widget().pack(side=tk.TOP, fill=tk.X, padx=5, pady=2)
 
-        # 將小圖控制元件保存到 spectrum 物件中，方便後續更新
         spectrum.fig_small = fig_small
         spectrum.ax_small = ax_small
         spectrum.canvas_small = canvas_small
 
     def on_multiplier_change(self, spectrum, var):
         try:
-            # 嘗試將手動輸入的倍率轉成浮點數
             new_multiplier = float(var.get())
             spectrum.multiplier = new_multiplier
-            # 更新該光譜的小圖
             spectrum.ax_small.cla()
             spectrum.ax_small.plot(spectrum.df['wavelength'], spectrum.get_scaled_intensity(), color=ACCENT_COLOR)
             spectrum.ax_small.set_title("預覽", fontname=FONT_NAME, fontsize=8)
             spectrum.ax_small.tick_params(labelsize=6)
             spectrum.canvas_small.draw()
-            # 更新整體圖形與積分資訊
             self.update_all_plots()
         except Exception as e:
             messagebox.showerror("倍率更新錯誤", f"請輸入有效數字。\n錯誤內容：{str(e)}")
     
     def update_all_plots(self):
-        # 計算總光譜：各光譜資料疊加（倍率調整後）
         if not self.spectra:
             return
         try:
-            # 假設所有光譜覆蓋的波長範圍一致，以第一組為準
             wavelengths = self.spectra[0].df['wavelength'].values
             total_intensity = np.zeros_like(wavelengths, dtype=float)
             for sp in self.spectra:
                 total_intensity += sp.get_scaled_intensity().values
-            # 更新右側上方填色圖：利用線性分段色階映射（從400nm 紫色漸變至700nm 紅色）
+
+            # 更新光譜圖
             self.ax_fill.cla()
-            self.ax_fill.set_title("光譜填色圖", fontname=FONT_NAME)
-            self.ax_fill.set_xlabel("波長 (nm)", fontname=FONT_NAME)
-            self.ax_fill.set_ylabel("強度", fontname=FONT_NAME)
             norm = mcolors.Normalize(vmin=400, vmax=700)
             cmap = matplotlib.cm.get_cmap("jet")
             colors = [cmap(norm(w)) for w in wavelengths]
@@ -320,11 +319,9 @@ class MainApp(tk.Tk):
             for i in range(len(wavelengths)-1):
                 self.ax_fill.fill_between(wavelengths[i:i+2], total_intensity[i:i+2],
                                           color=colors[i])
-            # 更新右側下方：標準化各光譜對比折線圖
+
+            # 更新對比圖
             self.ax_compare.cla()
-            self.ax_compare.set_title("標準化光譜對比圖", fontname=FONT_NAME)
-            self.ax_compare.set_xlabel("波長 (nm)", fontname=FONT_NAME)
-            self.ax_compare.set_ylabel("歸一化強度", fontname=FONT_NAME)
             for sp in self.spectra:
                 intensity = sp.get_scaled_intensity().values
                 if np.max(intensity) != 0:
@@ -334,25 +331,20 @@ class MainApp(tk.Tk):
                 self.ax_compare.plot(wavelengths, intensity_norm, label=sp.filename)
             self.ax_compare.legend(fontsize=8)
             self.canvas_fig.draw()
-            # 更新積分資訊
+
+            # 更新所有計算結果
             self.update_ppf_info(total_intensity=total_intensity, wavelengths=wavelengths)
         except Exception as e:
             messagebox.showerror("繪圖更新錯誤", str(e))
     
     def update_ppf_info(self, total_intensity=None, wavelengths=None):
-        """
-        計算並顯示 PPF 資訊，計算公式：
-        對於每個波長 n（單位：nm），若強度為 mw（單位：mW），則 ppf(n) = n * mw * 0.008359 / 1000.0
-        分別計算：
-          - 總 PPF：400 ~ 700nm 各波長 ppf(n) 累加
-          - 藍光 PPF：400 ~ 499nm
-          - 綠光 PPF：500 ~ 599nm
-          - 紅光 PPF：600 ~ 700nm
-        """
         try:
             if total_intensity is None or wavelengths is None:
                 total_ppf = blue_ppf = green_ppf = red_ppf = 0.0
+                self.cct_var.set("相關色溫 (CCT): --")
+                self.ra_var.set("一般顯色指數 (Ra): --")
             else:
+                # PPF計算
                 mask_total = (wavelengths >= 400) & (wavelengths <= 700)
                 mask_blue  = (wavelengths >= 400) & (wavelengths < 500)
                 mask_green = (wavelengths >= 500) & (wavelengths < 600)
@@ -364,12 +356,64 @@ class MainApp(tk.Tk):
                 blue_ppf  = np.sum(wavelengths[mask_blue]  * total_intensity[mask_blue]  * factor)
                 green_ppf = np.sum(wavelengths[mask_green] * total_intensity[mask_green] * factor)
                 red_ppf   = np.sum(wavelengths[mask_red]   * total_intensity[mask_red]   * factor)
-            self.ppf_total_var.set(f"總 PPF (400-700nm): {total_ppf:.2f}")
-            self.ppf_blue_var.set(f"藍光 PPF (400-499nm): {blue_ppf:.2f}")
-            self.ppf_green_var.set(f"綠光 PPF (500-599nm): {green_ppf:.2f}")
-            self.ppf_red_var.set(f"紅光 PPF (600-700nm): {red_ppf:.2f}")
+
+                # 更新PPF顯示
+                self.ppf_total_var.set(f"總 PPF (400-700nm): {total_ppf:.2f}")
+                # ---------------------------------------------
+                self.ppf_blue_var.set(f"藍光 PPF (400-499nm): {blue_ppf:.2f}")
+                self.ppf_green_var.set(f"綠光 PPF (500-599nm): {green_ppf:.2f}")
+                self.ppf_red_var.set(f"紅光 PPF (600-700nm): {red_ppf:.2f}")
+
+                # ========== CCT和Ra計算核心邏輯 ==========
+                try:
+                    # 建立光譜分佈物件
+                    data_dict = dict(zip(wavelengths, total_intensity))
+                    sd = SpectralDistribution(data_dict, name='Combined Spectrum')
+                    
+                    # 使用CIE 1931標準觀察者計算XYZ
+                    cmfs = MSDS_CMFS['CIE 1931 2 Degree CMFS']
+                    XYZ = sd_to_XYZ(sd, cmfs=cmfs)
+                    
+                    # 轉換為xy色度座標
+                    xy = XYZ_to_xy(XYZ)
+                    
+                    # 計算CCT（使用Hernandez1999方法）
+                    cct, _ = xy_to_CCT(xy, method='hernandez1999')
+                    self.cct_var.set(f"相關色溫 (CCT): {cct:.1f} K")
+
+                    # 計算一般顯色指數Ra
+                    try:
+                        # 根據CCT選擇參考光源
+                        if cct < 5000:
+                            ref_spd = SDS_ILLUMINANTS['FL2']  # 暖白光參考
+                        else:
+                            ref_spd = SDS_ILLUMINANTS['D65']  # 晝光參考
+                        
+                        # 對齊光譜範圍
+                        aligned_sd = sd.align(ref_spd.shape)
+                        
+                        # 計算CRI
+                        ra = color_rendering_index(aligned_sd, additional_data=False)
+                        self.ra_var.set(f"一般顯色指數 (Ra): {ra:.0f}")
+                        
+                    except Exception as e:
+                        self.ra_var.set("Ra計算失敗（需380-780nm完整光譜）")
+
+                except Exception as e:
+                    self.cct_var.set("CCT計算錯誤")
+                    self.ra_var.set("Ra計算錯誤")
+                    raise ValueError(f"色彩計算失敗: {str(e)}")
+
+            # else:  # 無有效數據時重置顯示
+            #     self.cct_var.set("相關色溫 (CCT): --")
+            #     self.ra_var.set("一般顯色指數 (Ra): --")
+
+        except ValueError as ve:
+            messagebox.showerror("數值錯誤", f"計算過程出現數值異常：{str(ve)}")
+        except KeyError as ke:
+            messagebox.showerror("資料錯誤", f"光譜範圍不匹配：{str(ke)}")
         except Exception as e:
-            messagebox.showerror("積分計算錯誤", str(e))
+            messagebox.showerror("未知錯誤", f"未預期的錯誤：{str(e)}")
 
 # =======================
 # 主入口

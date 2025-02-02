@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 import datetime
@@ -8,6 +5,16 @@ import os
 
 import numpy as np
 import pandas as pd
+import colour
+from colour.temperature import CCT_to_xy_CIE_D, xy_to_CCT_CIE_D
+from colour.colorimetry import (
+    SpectralDistribution,
+    SPECTRAL_SHAPE_DEFAULT,
+    sd_to_XYZ,
+    wavelength_to_XYZ
+
+)
+from colour.quality import colour_rendering_index
 
 import matplotlib
 matplotlib.use('TkAgg')
@@ -30,7 +37,7 @@ ACCENT_COLOR = "#4CAF50"
 PRESET_USER = "WSL"
 PRESET_PASS = "50968758"
 # 有效期至
-EXPIRE_DATE = datetime.datetime(2025, 2, 29)
+EXPIRE_DATE = datetime.datetime(2025, 2, 28)
 
 # =======================
 # 資料層：單個光譜資料
@@ -62,6 +69,43 @@ class SpectrumData:
     def get_scaled_intensity(self):
         """回傳倍率調整後的光譜資料"""
         return self.df['intensity'] * self.multiplier
+    
+    def get_spectral_distribution(self):
+        """將光譜資料轉換為 colour-science SpectralDistribution 物件"""
+        data = dict(zip(self.df['wavelength'], self.get_scaled_intensity()))
+        return SpectralDistribution(data)
+
+# =======================
+# 光譜計算功能
+# =======================
+def calculate_cct_ra(wavelengths, intensity):
+    """計算相關色溫(CCT)和顯色指數(Ra)"""
+    try:
+        # 建立光譜分布物件
+        spd = SpectralDistribution(dict(zip(wavelengths, intensity)))
+        
+        # 計算 XYZ 三刺激值
+        # XYZ = spectral_to_XYZ(spd)
+        XYZ = sd_to_XYZ(spd)
+        # 計算色度座標
+        xy = colour.XYZ_to_xy(XYZ)
+        
+        # 計算相關色溫 (CCT)
+        try:
+            cct = xy_to_CCT_CIE_D(xy)
+        except RuntimeError:
+            cct = 0  # 若計算失敗，返回 0
+        
+        # 計算顯色指數 (Ra)
+        try:
+            ra = colour_rendering_index(spd)
+        except Exception:
+            ra = 0  # 若計算失敗，返回 0
+        
+        return cct, ra
+    except Exception as e:
+        print(f"CCT/Ra calculation error: {str(e)}")
+        return 0, 0
 
 # =======================
 # 登入視窗
@@ -171,6 +215,8 @@ class MainApp(tk.Tk):
         self.ppf_blue_var  = tk.StringVar()
         self.ppf_green_var = tk.StringVar()
         self.ppf_red_var   = tk.StringVar()
+        self.cct_var = tk.StringVar()
+        self.ra_var = tk.StringVar()
 
         lbl_total = tk.Label(self.status_frame, textvariable=self.ppf_total_var, font=(FONT_NAME, 12),
                              bg=BG_COLOR, fg=FG_COLOR)
@@ -180,11 +226,18 @@ class MainApp(tk.Tk):
                              bg=BG_COLOR, fg=FG_COLOR)
         lbl_red   = tk.Label(self.status_frame, textvariable=self.ppf_red_var,   font=(FONT_NAME, 12),
                              bg=BG_COLOR, fg=FG_COLOR)
+        lbl_cct   = tk.Label(self.status_frame, textvariable=self.cct_var, font=(FONT_NAME, 12),
+                             bg=BG_COLOR, fg=FG_COLOR)
+        lbl_ra    = tk.Label(self.status_frame, textvariable=self.ra_var, font=(FONT_NAME, 12),
+                             bg=BG_COLOR, fg=FG_COLOR)
+        
         # 每項單獨一列顯示
         lbl_total.pack(anchor="w", padx=10)
         lbl_blue.pack(anchor="w", padx=10)
         lbl_green.pack(anchor="w", padx=10)
         lbl_red.pack(anchor="w", padx=10)
+        lbl_cct.pack(anchor="w", padx=10)
+        lbl_ra.pack(anchor="w", padx=10)
 
         self.update_ppf_info()
 
@@ -234,6 +287,7 @@ class MainApp(tk.Tk):
             return
         
         if len(filepaths) + len(self.spectra) > 10:
+            # messagebox.showerror("錯誤", "最多同時
             messagebox.showerror("錯誤", "最多同時載入10組光譜資料！")
             return
         
@@ -341,18 +395,14 @@ class MainApp(tk.Tk):
     
     def update_ppf_info(self, total_intensity=None, wavelengths=None):
         """
-        計算並顯示 PPF 資訊，計算公式：
-        對於每個波長 n（單位：nm），若強度為 mw（單位：mW），則 ppf(n) = n * mw * 0.008359 / 1000.0
-        分別計算：
-          - 總 PPF：400 ~ 700nm 各波長 ppf(n) 累加
-          - 藍光 PPF：400 ~ 499nm
-          - 綠光 PPF：500 ~ 599nm
-          - 紅光 PPF：600 ~ 700nm
+        計算並顯示 PPF、CCT 與 Ra 資訊
         """
         try:
             if total_intensity is None or wavelengths is None:
                 total_ppf = blue_ppf = green_ppf = red_ppf = 0.0
+                cct = ra = 0.0
             else:
+                # PPF 計算
                 mask_total = (wavelengths >= 400) & (wavelengths <= 700)
                 mask_blue  = (wavelengths >= 400) & (wavelengths < 500)
                 mask_green = (wavelengths >= 500) & (wavelengths < 600)
@@ -364,12 +414,20 @@ class MainApp(tk.Tk):
                 blue_ppf  = np.sum(wavelengths[mask_blue]  * total_intensity[mask_blue]  * factor)
                 green_ppf = np.sum(wavelengths[mask_green] * total_intensity[mask_green] * factor)
                 red_ppf   = np.sum(wavelengths[mask_red]   * total_intensity[mask_red]   * factor)
+
+                # CCT 與 Ra 計算
+                cct, ra = calculate_cct_ra(wavelengths[mask_total], total_intensity[mask_total])
+
+            # 更新顯示資訊
             self.ppf_total_var.set(f"總 PPF (400-700nm): {total_ppf:.2f}")
             self.ppf_blue_var.set(f"藍光 PPF (400-499nm): {blue_ppf:.2f}")
             self.ppf_green_var.set(f"綠光 PPF (500-599nm): {green_ppf:.2f}")
             self.ppf_red_var.set(f"紅光 PPF (600-700nm): {red_ppf:.2f}")
+            self.cct_var.set(f"相關色溫 (CCT): {cct:.1f}K")
+            self.ra_var.set(f"顯色指數 (Ra): {ra:.1f}")
+
         except Exception as e:
-            messagebox.showerror("積分計算錯誤", str(e))
+            messagebox.showerror("計算錯誤", str(e))
 
 # =======================
 # 主入口
