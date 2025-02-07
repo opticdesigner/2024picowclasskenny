@@ -1,0 +1,107 @@
+/* 基本樣式重置 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+body {
+  line-height: 1.6;
+  color: #333;
+  background-color: #f5f5f5;
+}
+
+/* 頭像區塊 */
+.avatar-container {
+  width: 150px;
+  height: 150px;
+  margin: 2rem auto;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* 姓名標題 */
+.name {
+  text-align: center;
+  font-size: 2.5rem;
+  color: #2c3e50;
+  margin-bottom: 2rem;
+}
+
+/* 內容區塊通用樣式 */
+section {
+  padding: 2rem;
+  margin: 2rem auto;
+  max-width: 800px;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+h2 {
+  color: #3498db;
+  border-bottom: 2px solid #3498db;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+/* 聯繫方式樣式 */
+.contact ul {
+  list-style: none;
+  padding-left: 1rem;
+}
+
+.contact li {
+  margin-bottom: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.contact li::before {
+  content: "•";
+  color: #3498db;
+}
+
+/* 作品展示網格 */
+.portfolio-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.portfolio-item {
+  padding: 1rem;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  transition: transform 0.2s;
+}
+
+.portfolio-item:hover {
+  transform: translateY(-3px);
+}
+
+/* 響應式設計 */
+@media (max-width: 768px) {
+  .name {
+    font-size: 2rem;
+  }
+  
+  section {
+    margin: 1rem;
+    padding: 1.5rem;
+  }
+  
+  .portfolio-grid {
+    grid-template-columns: 1fr;
+  }
+}

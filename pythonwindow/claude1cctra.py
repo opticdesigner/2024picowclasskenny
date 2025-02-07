@@ -113,10 +113,11 @@ def calculate_cct_ra(wavelengths, intensity):
 class LoginWindow(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("光譜分析系統 - 登入")
+        self.title("光譜分析系統 - Copyright (c) 2025 Steve Li")
         self.configure(bg=BG_COLOR)
         self.geometry("400x250")
-        self.resizable(False, False)
+        # self.resizable(False, False)
+        self.resizable(True, True)
         # 視窗置中
         self.center_window(400, 250)
         self.create_widgets()
@@ -151,7 +152,10 @@ class LoginWindow(tk.Tk):
         btn_login = tk.Button(self, text="登入", font=(FONT_NAME, 12), bg=ACCENT_COLOR, fg=FG_COLOR,
                               command=self.check_login)
         btn_login.pack(pady=(20,10))
-    
+
+        lbl_pass = tk.Label(self, text="Copyright (c) 2025 Steve Li", font=(FONT_NAME, 12), bg=BG_COLOR, fg=FG_COLOR)
+        lbl_pass.pack(pady=5)
+
     def check_login(self):
         username = self.entry_user.get().strip()
         password = self.entry_pass.get().strip()
@@ -168,7 +172,7 @@ class LoginWindow(tk.Tk):
 class MainApp(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("高精度光譜分析工具")
+        self.title("高精度光譜分析工具 Copyright (c) 2025 Steve Li  All rights reserved. 此程式碼由 Steve Li 擁有，未經授權不得複製、修改或分發。 ")
         self.configure(bg=BG_COLOR)
         self.geometry(f"{APP_WIDTH}x{APP_HEIGHT}")
         self.center_window(APP_WIDTH, APP_HEIGHT)

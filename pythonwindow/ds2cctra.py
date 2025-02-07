@@ -16,8 +16,21 @@ import matplotlib.pyplot as plt
 # ========== 新增colour-science相關導入 ==========
 import colour
 from colour import SDS_ILLUMINANTS
-from colour.colorimetry import (MSDS_CMFS, SpectralDistribution, sd_to_XYZ, XYZ_to_xy)
-from colour.quality import color_rendering_index
+# #from colour.colorimetry import (MSDS_CMFS, SpectralDistribution, sd_to_XYZ, XYZ_to_xy)
+# from colour.colorimetry import (MSDS_CMFS, SpectralDistribution, sd_to_XYZ)
+# from colour.models import XYZ_to_xy
+# # from colour.quality import color_rendering_index
+from colour.colorimetry import (
+    MSDS_CMFS, 
+    SpectralDistribution, 
+    sd_to_XYZ, 
+#    colour_rendering_index  # 修正：從colour.colorimetry導入
+)
+# from colour.colorimetry import Colour Rendering Index
+from colour import colour_rendering_index
+# from colour.temperature import xy_to_CCT
+
+from colour.models import XYZ_to_xy
 from colour.temperature import xy_to_CCT
 
 # =======================
@@ -34,7 +47,7 @@ ACCENT_COLOR = "#4CAF50"
 PRESET_USER = "WSL"
 PRESET_PASS = "50968758"
 # 有效期至
-EXPIRE_DATE = datetime.datetime(2025, 2, 29)
+EXPIRE_DATE = datetime.datetime(2025, 2, 28)
 
 # =======================
 # 資料層：單個光譜資料
@@ -312,8 +325,12 @@ class MainApp(tk.Tk):
 
             # 更新光譜圖
             self.ax_fill.cla()
+            self.ax_fill.set_title("光譜填色圖", fontname=FONT_NAME)
+            self.ax_fill.set_xlabel("波長 (nm)", fontname=FONT_NAME)
+            self.ax_fill.set_ylabel("強度", fontname=FONT_NAME)
             norm = mcolors.Normalize(vmin=400, vmax=700)
-            cmap = matplotlib.cm.get_cmap("jet")
+            # cmap = matplotlib.cm.get_cmap("jet")
+            cmap = matplotlib.colormaps["jet"]
             colors = [cmap(norm(w)) for w in wavelengths]
             self.ax_fill.plot(wavelengths, total_intensity, color=ACCENT_COLOR)
             for i in range(len(wavelengths)-1):
@@ -366,6 +383,12 @@ class MainApp(tk.Tk):
 
                 # ========== CCT和Ra計算核心邏輯 ==========
                 try:
+                    # 補齊缺失的波長範圍（380-780nm）
+                    full_wavelengths = np.arange(380, 781, 1)  # 380nm 到 780nm
+                    full_intensity = np.interp(full_wavelengths, wavelengths, total_intensity, left=0, right=0)
+
+
+
                     # 建立光譜分佈物件
                     data_dict = dict(zip(wavelengths, total_intensity))
                     sd = SpectralDistribution(data_dict, name='Combined Spectrum')
@@ -393,7 +416,8 @@ class MainApp(tk.Tk):
                         aligned_sd = sd.align(ref_spd.shape)
                         
                         # 計算CRI
-                        ra = color_rendering_index(aligned_sd, additional_data=False)
+                        # ra = color_rendering_index(aligned_sd, additional_data=False)
+                        ra = colour_rendering_index(aligned_sd, additional_data=False)
                         self.ra_var.set(f"一般顯色指數 (Ra): {ra:.0f}")
                         
                     except Exception as e:
@@ -405,8 +429,8 @@ class MainApp(tk.Tk):
                     raise ValueError(f"色彩計算失敗: {str(e)}")
 
             # else:  # 無有效數據時重置顯示
-            #     self.cct_var.set("相關色溫 (CCT): --")
-            #     self.ra_var.set("一般顯色指數 (Ra): --")
+                self.cct_var.set("相關色溫 (CCT): --")
+                self.ra_var.set("一般顯色指數 (Ra): --")
 
         except ValueError as ve:
             messagebox.showerror("數值錯誤", f"計算過程出現數值異常：{str(ve)}")
