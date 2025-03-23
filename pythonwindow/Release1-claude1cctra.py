@@ -113,7 +113,7 @@ def calculate_cct_ra(wavelengths, intensity):
 class LoginWindow(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("光譜分析系統 - Copyright (c) 2025 Steve Li")
+        self.title("GrowGenie Spectrum Generator - Copyright (c) 2025 Steve Li  All rights reserved. 此程式碼由 Steve Li 擁有，未經授權不得複製、修改或分發。")
         self.configure(bg=BG_COLOR)
         self.geometry("400x250")
         # self.resizable(False, False)
