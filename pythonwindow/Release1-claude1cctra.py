@@ -37,7 +37,7 @@ ACCENT_COLOR = "#4CAF50"
 PRESET_USER = "WSL"
 PRESET_PASS = "50968758"
 # 有效期至
-EXPIRE_DATE = datetime.datetime(2025, 3, 30)
+EXPIRE_DATE = datetime.datetime(2025, 4, 30)
 
 # =======================
 # 資料層：單個光譜資料
